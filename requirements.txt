@@ -4,3 +4,4 @@ Pillow==10.4.0
 numpy==1.26.4
 matplotlib==3.9.2
 requests==2.32.3
+streamlit-cropper==0.2.2
