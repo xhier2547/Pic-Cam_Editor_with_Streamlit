@@ -1,0 +1,43 @@
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache / compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.egg
+*.egg-info/
+*.manifest
+*.spec
+
+# Jupyter / Streamlit cache
+.ipynb_checkpoints/
+.streamlit/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Logs / temp
+*.log
+*.tmp
+*.swp
+
+# IDE / Editor settings
+.vscode/
+.idea/
+
+# Build / dist
+build/
+dist/
+*.egg-info/
+
+# Backup files
+*.bak
+*.old
+*.orig
