@@ -37,7 +37,6 @@ elif option == "Image URL":
 elif option == "Webcam":
     st.subheader("📸 Webcam Realtime Mode")
 
-    # โหลด YOLOv5
     @st.cache_resource
     def load_model():
         return torch.hub.load("ultralytics/yolov5", "yolov5s")
@@ -61,16 +60,13 @@ elif option == "Webcam":
                 st.error("ไม่สามารถเปิด Webcam ได้")
                 break
 
-            # ปรับ Brightness & Contrast
             frame = cv2.convertScaleAbs(frame, alpha=contrast, beta=brightness)
 
-            # Blur
             if blur_amount > 0:
                 frame = cv2.GaussianBlur(frame, (blur_amount*2+1, blur_amount*2+1), 0)
 
-            # YOLOv5 detect
             if use_yolo:
-                results = model(frame[..., ::-1], size=320)  # BGR->RGB
+                results = model(frame[..., ::-1], size=320)
                 for *xyxy, conf, cls in results.xyxy[0].cpu().numpy():
                     x1, y1, x2, y2 = map(int, xyxy)
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
@@ -84,7 +80,7 @@ elif option == "Webcam":
 
 # ---------------- SESSION STATE ---------------- #
 if "layers" not in st.session_state:
-    st.session_state.layers = []  # เก็บเลเยอร์
+    st.session_state.layers = []  
 
 # ---------------- ฟังก์ชันรวมเลเยอร์ ---------------- #
 def composite_layers(layers, canvas_size):
@@ -92,21 +88,15 @@ def composite_layers(layers, canvas_size):
     for layer in layers:
         if not layer["visible"]:
             continue
-
         img = layer["image"]
         scale = layer.get("scale", 1.0)
-
-        # Resize
         if scale != 1.0:
             h, w = img.shape[:2]
             img = cv2.resize(img, (int(w * scale), int(h * scale)))
-
         h, w = img.shape[:2]
         x, y = layer.get("pos_x", 0), layer.get("pos_y", 0)
-
         x_end, y_end = min(x + w, canvas_size[0]), min(y + h, canvas_size[1])
         lx_end, ly_end = x_end - x, y_end - y
-
         if x < canvas_size[0] and y < canvas_size[1]:
             roi = final[y:y_end, x:x_end]
             overlay = cv2.addWeighted(roi, 1 - layer["opacity"], img[:ly_end, :lx_end], layer["opacity"], 0)
@@ -154,11 +144,10 @@ if image and option != "Webcam":
         else:
             st.image(processed, caption="ผลลัพธ์", channels="RGB", use_column_width=True)
 
-    # -------- Layers -------- #
+    # -------- Layers + Graphs -------- #
     with col3:
         st.markdown("### 🗂 Layers Panel")
 
-        # init background layer
         if not any(l["name"] == "Background" for l in st.session_state.layers):
             st.session_state.layers.append({
                 "id": len(st.session_state.layers),
@@ -171,7 +160,6 @@ if image and option != "Webcam":
                 "scale": 1.0
             })
 
-        # add overlay
         overlay_file = st.file_uploader("➕ Add Overlay", type=["jpg", "png", "jpeg"], key=f"overlay_{len(st.session_state.layers)}")
         if overlay_file:
             overlay_img = Image.open(overlay_file).convert("RGB")
@@ -186,7 +174,6 @@ if image and option != "Webcam":
                 "scale": 1.0
             })
 
-        # Layer controls
         delete_idx = None
         for i, layer in enumerate(reversed(st.session_state.layers)):
             idx = len(st.session_state.layers) - 1 - i
@@ -211,6 +198,27 @@ if image and option != "Webcam":
 
         if delete_idx is not None:
             st.session_state.layers.pop(delete_idx)
+
+        # -------- Extra: Graph -------- #
+        st.markdown("### 📊 Image Histogram")
+        if st.button("Show Histogram of Final Image"):
+            import matplotlib.pyplot as plt
+            if st.session_state.layers:
+                canvas_size = (st.session_state.layers[0]["image"].shape[1],
+                               st.session_state.layers[0]["image"].shape[0])
+                final = composite_layers(st.session_state.layers, canvas_size)
+                fig, ax = plt.subplots(figsize=(4,3))
+                if final.ndim == 3:
+                    colors = ('r','g','b')
+                    for i, col in enumerate(colors):
+                        hist = cv2.calcHist([final],[i],None,[256],[0,256])
+                        ax.plot(hist, color=col)
+                else:
+                    ax.hist(final.ravel(), bins=256, color='gray')
+                ax.set_title("Histogram of Final Image")
+                ax.set_xlabel("Pixel Intensity")
+                ax.set_ylabel("Frequency")
+                st.pyplot(fig)
 
         # Download merged
         if st.session_state.layers:
